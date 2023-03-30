@@ -17,62 +17,29 @@
  *   You should have received a copy of the GNU General Public License     *
  *   along with this program; if not, see <http://www.gnu.org/licenses/>   *
  ***************************************************************************/
-#ifndef DIMMABLE_LIGHT_MANAGER_H
-#define DIMMABLE_LIGHT_MANAGER_H
 
-#include "dimmable_light.h"
+#if defined(ARDUINO_ARCH_RP2040) && !defined(ARDUINO_ARCH_MBED)
 
-#if defined(ESP8266) || defined(ESP32) || defined(ARDUINO_ARCH_SAMD) || defined(ARDUINO_ARCH_RP2040)
-// Unfortunately Arduino defines max/min macros, those create conflicts with the one
-// defined by C++/STL environment
-#undef max
-#undef min
-#include <unordered_map>
-#elif defined(AVR)
-#include <ArduinoSTL.h>
-#include <map>
-#endif
+#ifndef HW_TIMER_PICO_H
+#define HW_TIMER_PICO_H
 
-#include <string>
+#include <stdint.h>
 
 /**
- * Class to store the mapping between a DimmableLight object and
- * a (friendly) name. This could be useful when developing APIs.
+ * Initialize the timer.
  */
-class DimmableLightManager {
-public:
-  /**
-   * Create a new light with a given name
-   */
-  bool add(String lightName, uint8_t pin);
+void timerBegin();
 
-  /**
-   * Get a light with a specific name, if any
-   */
-  DimmableLight* get(String lightName);
+/**
+ * Set callback function on timer triggers
+ */
+void timerSetCallback(void (*callback)());
 
-  /**
-   * Get a light from from the contaniner.
-   *
-   * This method is "circular", that means once you get the last element
-   * the nect call return the first one.
-   */
-  std::pair<String, DimmableLight*> get();
+/**
+ * Start the timer to trigger after the specified number of microseconds.
+ */
+void timerStart(uint64_t t);
 
-  int getCount() {
-    return dla.size();
-  }
+#endif  // HW_TIMER_PICO_H
 
-  static void begin() {
-    DimmableLight::begin();
-  }
-
-private:
-#if defined(ESP8266) || defined(ESP32) || defined(ARDUINO_ARCH_SAMD) || defined(ARDUINO_ARCH_RP2040)
-  std::unordered_map<std::string, DimmableLight*> dla;
-#elif defined(AVR)
-  std::map<std::string, DimmableLight*> dla;
-#endif
-};
-
-#endif
+#endif  // ARDUINO_ARCH_RP2040

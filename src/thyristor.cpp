@@ -29,8 +29,10 @@
 #include "hw_timer_avr.h"
 #elif defined(ARDUINO_ARCH_SAMD)
 #include "hw_timer_samd.h"
+#elif defined(ARDUINO_ARCH_RP2040) && !defined(ARDUINO_ARCH_MBED)
+#include "hw_timer_pico.h"
 #else
-#error "only ESP8266, ESP32, AVR, SAMD architectures are supported"
+#error "only ESP8266, ESP32, AVR, SAMD & RP2040 (non-mbed) architectures are supported"
 #endif
 
 // Check if zero cross interrupts are evenly time-spaced (i.e. no spurious interrupt)
@@ -200,6 +202,10 @@ void activate_thyristors() {
     }
 #elif defined(ARDUINO_ARCH_SAMD)
   timerStart(microsecond2Tick(delay));
+#elif defined(ARDUINO_ARCH_RP2040) && !defined(ARDUINO_ARCH_MBED)
+  timerStart(delay);
+#else
+  #error "Not implemented"
 #endif
   } else {
 
@@ -213,6 +219,8 @@ void activate_thyristors() {
     stopTimer();
 #elif defined(ARDUINO_ARCH_AVR) || defined(ARDUINO_ARCH_SAMD)
     // Given actual HAL, AVR and SAMD counter automatically stops on interrupt
+#elif defined(ARDUINO_ARCH_RP2040) && !defined(ARDUINO_ARCH_MBED)
+    // Timer callback is not rescheduled
 #endif
 #else
     // If there are not more thyristors to serve, set timer to turn off gates' signal
@@ -231,6 +239,11 @@ void activate_thyristors() {
 #elif defined(ARDUINO_ARCH_SAMD)
     timerSetCallback(turn_off_gates_int);
     timerStart(microsecond2Tick(delay));
+#elif defined(ARDUINO_ARCH_RP2040) && !defined(ARDUINO_ARCH_MBED)
+    timerSetCallback(turn_off_gates_int);
+    timerStart(delay);
+#else
+    #error "Not implemented"
 #endif
 #endif
   }
@@ -396,6 +409,11 @@ void zero_cross_int() {
 #elif defined(ARDUINO_ARCH_SAMD)
   timerSetCallback(activate_thyristors);
   timerStart(microsecond2Tick(pinDelay[thyristorManaged].delay));
+#elif defined(ARDUINO_ARCH_RP2040) && !defined(ARDUINO_ARCH_MBED)
+  timerSetCallback(activate_thyristors);
+  timerStart(pinDelay[thyristorManaged].delay);
+#else
+  # error "Not implemented"
 #endif
   } else {
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -406,6 +424,8 @@ void zero_cross_int() {
     stopTimer();
 #elif defined(ARDUINO_ARCH_AVR) || defined(ARDUINO_ARCH_SAMD)
     // Given actual HAL, AVR and SAMD counter automatically stops on interrupt
+#elif defined(ARDUINO_ARCH_RP2040) && !defined(ARDUINO_ARCH_MBED)
+    // Timer callback is not rescheduled
 #endif
   }
 }
@@ -534,9 +554,11 @@ void Thyristor::begin() {
   T1I = 0;
 #elif defined(ARDUINO_ARCH_ESP32)
   timerInit(activate_thyristors);
-#elif defined(ARDUINO_ARCH_AVR) || defined(ARDUINO_ARCH_SAMD)
+#elif defined(ARDUINO_ARCH_AVR) || defined(ARDUINO_ARCH_SAMD) || (defined(ARDUINO_ARCH_RP2040) && !defined(ARDUINO_ARCH_MBED))
   timerSetCallback(activate_thyristors);
   timerBegin();
+#else
+  #error "Not implemented"
 #endif
 
 #ifdef MONITOR_FREQUENCY
